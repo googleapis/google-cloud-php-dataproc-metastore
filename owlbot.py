@@ -14,31 +14,25 @@
 
 """This script is used to synthesize generated parts of this library."""
 
-import synthtool as s
-import synthtool.gcp as gcp
 import logging
+from pathlib import Path
+import subprocess
+
+import synthtool as s
+from synthtool.languages import php
+from synthtool import _tracked_paths
 
 logging.basicConfig(level=logging.DEBUG)
 
-gapic = gcp.GAPICBazel()
-common = gcp.CommonTemplates()
+src = Path(f"../{php.STAGING_DIR}/DataprocMetastore").resolve()
+dest = Path().resolve()
 
-for version in ['v1', 'v1alpha', 'v1beta']:
-    library = gapic.php_library(
-        service='dataprocmetastore',
-        version=version,
-        bazel_target=f'//google/cloud/metastore/{version}:google-cloud-metastore-{version}-php',
-    )
+# Added so that we can pass copy_excludes in the owlbot_main() call
+_tracked_paths.add(src)
 
-    # copy all src including partial veneer classes
-    s.move(library / 'src')
+php.owlbot_main(src=src, dest=dest)
 
-    # copy proto files to src also
-    s.move(library / 'proto/src/Google/Cloud/Metastore', 'src/')
-    s.move(library / 'tests/')
 
-    # copy GPBMetadata file to metadata
-    s.move(library / 'proto/src/GPBMetadata/Google/Cloud/Metastore', 'metadata/')
 
 # document and utilize apiEndpoint instead of serviceAddress
 s.replace(
@@ -57,16 +51,6 @@ s.replace(
     "**/Gapic/*GapicClient.php",
     r"\$transportConfig, and any \$serviceAddress",
     r"$transportConfig, and any `$apiEndpoint`")
-
-# fix year
-s.replace(
-    '**/*Client.php',
-    r'Copyright \d{4}',
-    'Copyright 2021')
-s.replace(
-    'tests/**/*Test.php',
-    r'Copyright \d{4}',
-    'Copyright 2021')
 
 # Change the wording for the deprecation warning.
 s.replace(
